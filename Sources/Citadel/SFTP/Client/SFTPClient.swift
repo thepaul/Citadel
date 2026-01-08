@@ -103,6 +103,35 @@ public final class SFTPClient: Sendable {
             }
         }.get()
     }
+
+    /// Set the attributes of a file on the SFTP server.
+    ///
+    /// - Parameters:
+    ///   - filePath: Path to the file
+    ///   - attributes: The new file attributes to set (such as permissions, size, or timestamps).
+    /// - Throws: SFTPError if the request fails
+    ///
+    /// ## Example
+    /// ```swift
+    /// try await sftp.setAttributes(at: "test.txt", to: .init(permissions: 0o644))
+    /// ```
+    public func setAttributes(at filePath: String, to attributes: SFTPFileAttributes) async throws {
+        self.logger.info("SFTP requesting to set attributes at '\(filePath)' to \(attributes)")
+
+        let response = try await sendRequest(.setstat(.init(
+            requestId: allocateRequestId(),
+            path: filePath,
+            attributes: attributes
+        )))
+
+        guard case .status(let status) = response else {
+            throw SFTPError.invalidResponse
+        }
+
+        guard status.errorCode == .ok else {
+            throw SFTPError.errorStatus(status)
+        }
+    }
     
     /// List the contents of a directory on the SFTP server.
     ///

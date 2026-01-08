@@ -72,6 +72,36 @@ public final class SFTPFile {
                                                                                          
         return attributes.attributes
     }
+
+    /// Sets the attributes on the file handle represented by this `SFTPFile`.
+    ///
+    /// - Parameter attributes: The new file attributes to set (such as permissions, size, or timestamps).
+    /// - Throws: `SFTPError.fileHandleInvalid` if the file handle has been closed or is invalid,
+    ///           `SFTPError.invalidResponse` if the SFTP server returns an unexpected response,
+    ///           or `SFTPError.errorStatus` if the server returns a non-success status.
+    ///
+    /// ## Example
+    /// ```swift
+    /// let file = try await sftp.openFile(filePath: "test.txt", flags: .readWrite)
+    /// try await file.setAttributes(to: .init(permissions: 0o644))
+    /// ```
+    public func setAttributes(to attributes: SFTPFileAttributes) async throws {
+        guard self.isActive else { throw SFTPError.fileHandleInvalid }
+
+        let response = try await self.client.sendRequest(.fsetstat(.init(
+            requestId: self.client.allocateRequestId(),
+            handle: self.handle,
+            attributes: attributes
+        )))
+
+        guard case .status(let status) = response else {
+            throw SFTPError.invalidResponse
+        }
+
+        guard status.errorCode == .ok else {
+            throw SFTPError.errorStatus(status)
+        }
+    }
     
     /// Read up to the given number of bytes from the file, starting at the given byte offset.
     ///

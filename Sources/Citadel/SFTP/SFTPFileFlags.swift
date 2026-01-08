@@ -49,8 +49,8 @@ public struct SFTPOpenFileFlags: OptionSet, CustomDebugStringConvertible, Sendab
     }
 }
 
-public struct SFTPFileAttributes: CustomDebugStringConvertible, Sendable {
-    public struct Flags: OptionSet {
+public struct SFTPFileAttributes: CustomDebugStringConvertible, Sendable, Hashable {
+    public struct Flags: OptionSet, Hashable {
         public var rawValue: UInt32
         
         public init(rawValue: UInt32) {
@@ -64,7 +64,7 @@ public struct SFTPFileAttributes: CustomDebugStringConvertible, Sendable {
         public static let extended = Flags(rawValue: 0x80000000)
     }
     
-    public struct UserGroupId: Sendable {
+    public struct UserGroupId: Sendable, Hashable {
         public let userId: UInt32
         public let groupId: UInt32
         
@@ -77,7 +77,7 @@ public struct SFTPFileAttributes: CustomDebugStringConvertible, Sendable {
         }
     }
     
-    public struct AccessModificationTime: Sendable {
+    public struct AccessModificationTime: Sendable, Hashable {
         // Both written as UInt32 seconds since jan 1 1970 as UTC
         public let accessTime: Date
         public let modificationTime: Date
@@ -116,6 +116,16 @@ public struct SFTPFileAttributes: CustomDebugStringConvertible, Sendable {
         
         return flags
     }
+
+    struct ExtendedMetadata: Sendable, Hashable {
+        public let key: String
+        public let value: String
+        
+        public init(key: String, value: String) {
+            self.key = key
+            self.value = value
+        }
+    }
     
     public var size: UInt64?
     public var uidgid: UserGroupId?
@@ -123,7 +133,13 @@ public struct SFTPFileAttributes: CustomDebugStringConvertible, Sendable {
     // TODO: Permissions as OptionSet
     public var permissions: UInt32?
     public var accessModificationTime: AccessModificationTime?
-    public var extended = [(String, String)]()
+    private var _extended = [ExtendedMetadata]()
+    public var extended: [(String, String)] {
+        get { return _extended.map { ($0.key, $0.value) } }
+        set {
+            _extended = newValue.map { ExtendedMetadata(key: $0.0, value: $0.1) }
+        }
+    }
     
     public init(size: UInt64? = nil, accessModificationTime: AccessModificationTime? = nil) {
         self.size = size

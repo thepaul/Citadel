@@ -35,6 +35,8 @@ enum SFTPRequest: CustomDebugStringConvertible, Sendable {
     case remove(SFTPMessage.Remove)
     case rmdir(SFTPMessage.RmDir)
     case rename(SFTPMessage.Rename)
+    case fsetstat(SFTPMessage.FileSetStat)
+    case setstat(SFTPMessage.SetStat)
 
     var requestId: UInt32 {
         get {
@@ -64,6 +66,10 @@ enum SFTPRequest: CustomDebugStringConvertible, Sendable {
             case .rmdir(let message):
                 return message.requestId
             case .rename(let message):
+                return message.requestId
+            case .fsetstat(let message):
+                return message.requestId
+            case .setstat(let message):
                 return message.requestId
             }
         }
@@ -97,6 +103,10 @@ enum SFTPRequest: CustomDebugStringConvertible, Sendable {
             return .rmdir(message)
         case .rename(let message):
             return .rename(message)
+        case .fsetstat(let message):
+            return .fsetstat(message)
+        case .setstat(let message):
+            return .setstat(message)
         }
     }
     
@@ -115,6 +125,8 @@ enum SFTPRequest: CustomDebugStringConvertible, Sendable {
         case .remove(let message): return message.debugDescription
         case .rmdir(let message): return message.debugDescription
         case .rename(let message): return message.debugDescription
+        case .fsetstat(let message): return message.debugDescription
+        case .setstat(let message): return message.debugDescription
         }
     }
 }
@@ -126,6 +138,8 @@ enum SFTPResponse: Sendable {
     case mkdir(SFTPMessage.MkDir)
     case name(SFTPMessage.Name)
     case attributes(SFTPMessage.Attributes)
+    case fsetstat(SFTPMessage.FileSetStat)
+    case setstat(SFTPMessage.SetStat)
     
     var requestId: UInt32 {
         get {
@@ -141,6 +155,10 @@ enum SFTPResponse: Sendable {
             case .name(let message):
                 return message.requestId
             case .attributes(let message):
+                return message.requestId
+            case .fsetstat(let message):
+                return message.requestId
+            case .setstat(let message):
                 return message.requestId
             }
         }
@@ -160,6 +178,10 @@ enum SFTPResponse: Sendable {
             return .name(message)
         case .attributes(let message):
             return .attributes(message)
+        case .fsetstat(let message):
+            return .fsetstat(message)
+        case .setstat(let message):
+            return .setstat(message)
         }
     }
     
@@ -177,7 +199,11 @@ enum SFTPResponse: Sendable {
             self = .name(message)
         case .attributes(let message):
             self = .attributes(message)
-        case .realpath, .openFile, .fstat, .closeFile, .read, .write, .initialize, .version, .stat, .lstat, .rmdir, .opendir, .readdir, .remove, .fsetstat, .setstat, .symlink, .readlink, .rename:
+        case .fsetstat(let message):
+            self = .fsetstat(message)
+        case .setstat(let message):
+            self = .setstat(message)
+        case .realpath, .openFile, .fstat, .closeFile, .read, .write, .initialize, .version, .stat, .lstat, .rmdir, .opendir, .readdir, .remove, .symlink, .readlink, .rename:
             return nil
         }
     }
@@ -190,6 +216,8 @@ enum SFTPResponse: Sendable {
         case .mkdir(let message): return message.debugDescription
         case .name(let message): return message.debugDescription
         case .attributes(let message): return message.debugDescription
+        case .fsetstat(let message): return message.debugDescription
+        case .setstat(let message): return message.debugDescription
         }
     }
 }

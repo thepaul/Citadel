@@ -201,6 +201,36 @@ final class EndToEndTests: XCTestCase {
         )
     }
 
+    func testSetAttributes() async throws {
+        final class SFTP: SFTPDelegate, @unchecked /* for testing */ Sendable {
+            var fileAttributes: SFTPFileAttributes?
+            var path: String?
+            func fileAttributes(atPath path: String, context: SSHContext) async throws -> SFTPFileAttributes {
+                return fileAttributes!
+            }
+
+            func setFileAttributes(to attributes: SFTPFileAttributes, atPath path: String, context: SSHContext) async throws -> SFTPStatusCode {
+                fileAttributes = attributes
+                self.path = path
+                return .ok
+            }
+        }
+
+        try await runTest(
+            perform: { server, client in
+                let sftpServer = SFTP()
+                server.enableSFTP(withDelegate: sftpServer)
+                let sftp = try await client.openSFTP()
+                let attributes = SFTPFileAttributes(size: 100, accessModificationTime: SFTPFileAttributes.AccessModificationTime(accessTime: Date(timeIntervalSince1970: 1000), modificationTime: Date(timeIntervalSince1970: 2000)))
+                try await sftp.setAttributes(at: "/test/citadel/sftp", to: attributes)
+                XCTAssertEqual(sftpServer.fileAttributes, attributes)
+                XCTAssertEqual(sftpServer.path, "/test/citadel/sftp")
+            },
+            matchingError: { _ in false },
+            expectsFailure: false
+        )
+    }
+
     func testExecExitCode() async throws {
         final class Exec: ExecDelegate, @unchecked /* for testing */ Sendable {
             struct CommandContext: ExecCommandContext {
