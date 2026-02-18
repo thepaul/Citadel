@@ -129,7 +129,7 @@ final class ExecHandler: ChannelDuplexHandler {
                 }
                 var buffer = channel.allocator.buffer(capacity: data.count)
                 buffer.writeContiguousBytes(data)
-                channel.write(SSHChannelData(type: .stdErr, data: .byteBuffer(buffer)), promise: nil)
+                channel.writeAndFlush(SSHChannelData(type: .stdErr, data: .byteBuffer(buffer)), promise: nil)
             } catch {
                 channel.close(promise: nil)
             }
