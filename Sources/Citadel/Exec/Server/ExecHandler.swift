@@ -139,7 +139,7 @@ final class ExecHandler: ChannelDuplexHandler {
             NIOPipeBootstrap(group: channel.eventLoop)
                 .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
                 .channelInitializer { pipeChannel in
-                    pipeChannel.pipeline.addHandlers(SSHInboundChannelDataWrapper(), theirs)
+                    pipeChannel.pipeline.addHandlers(SSHInboundChannelDataWrapper(), SSHOutboundChannelDataUnwrapper(), theirs)
                 }.withPipes(
                     inputDescriptor: dup(handler.stdoutPipe.fileHandleForReading.fileDescriptor),
                     outputDescriptor: dup(handler.stdinPipe.fileHandleForWriting.fileDescriptor)

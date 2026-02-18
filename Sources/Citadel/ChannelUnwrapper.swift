@@ -37,6 +37,22 @@ final class SSHOutboundChannelDataWrapper: ChannelOutboundHandler {
     }
 }
 
+final class SSHOutboundChannelDataUnwrapper: ChannelOutboundHandler {
+    typealias OutboundIn = SSHChannelData
+    typealias OutboundOut = ByteBuffer
+
+    func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        let data = self.unwrapOutboundIn(data)
+
+        guard case .byteBuffer(let bytes) = data.data else {
+            context.fireErrorCaught(SSHChannelError.invalidDataType)
+            return
+        }
+
+        context.write(self.wrapOutboundOut(bytes), promise: promise)
+    }
+}
+
 final class SSHInboundChannelDataWrapper: ChannelInboundHandler {
     typealias InboundIn = ByteBuffer
     typealias InboundOut = SSHChannelData

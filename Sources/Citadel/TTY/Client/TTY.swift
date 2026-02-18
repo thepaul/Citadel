@@ -420,6 +420,63 @@ extension SSHClient {
         }
     }
 
+    /// Executes a command via SSH exec channel with bidirectional I/O
+    ///
+    /// Unlike `withTTY` which opens a shell session, this method executes a specific
+    /// command via the SSH exec channel (RFC 4254). The exec channel is 8-bit safe
+    /// and suitable for binary data transfer without PTY escape sequence processing.
+    ///
+    /// - Parameters:
+    ///   - command: The command to execute on the remote server
+    ///   - environment: Array of environment variables to set for the command
+    ///   - perform: Closure that receives input/output streams for bidirectional communication
+    /// - Throws: Any errors that occur during exec setup or operation
+    ///
+    /// ## Example
+    /// ```swift
+    /// // Execute a command with bidirectional I/O
+    /// try await client.withExec("python3 ~/.myapp/server.py") { inbound, outbound in
+    ///     // Send data to stdin
+    ///     try await outbound.write(ByteBuffer(string: "GET / HTTP/1.1\r\n\r\n"))
+    ///
+    ///     // Read response from stdout
+    ///     for try await output in inbound {
+    ///         switch output {
+    ///         case .stdout(let buffer):
+    ///             // Process stdout (8-bit safe)
+    ///             handleResponse(buffer)
+    ///         case .stderr(let buffer):
+    ///             // Process stderr
+    ///             logError(buffer)
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    @available(macOS 15.0, *)
+    public func withExec(
+        _ command: String,
+        environment: [SSHChannelRequestEvent.EnvironmentRequest] = [],
+        perform: (_ inbound: TTYOutput, _ outbound: TTYStdinWriter) async throws -> Void
+    ) async throws {
+        let (channel, output) = try await _executeCommandStream(
+            environment: environment,
+            mode: .command(command)
+        )
+
+        func close() async throws {
+            try await channel.close()
+        }
+
+        do {
+            let inbound = TTYOutput(sequence: output)
+            try await perform(inbound, TTYStdinWriter(channel: channel))
+            try await close()
+        } catch {
+            try await close()
+            throw error
+        }
+    }
+
     /// Executes a command and returns separate stdout and stderr streams
     /// 
     /// Example:
