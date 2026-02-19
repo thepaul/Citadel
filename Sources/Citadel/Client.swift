@@ -273,7 +273,8 @@ public final class SSHClient {
     /// - protocolOptions: The protocol options to use. See `SSHProtocolOption` for more information.
     /// - group: The event loop group to use. Defaults to a single-threaded event loop group.
     /// - channelHandlers: Pass in an array of channel prehandlers that execute first. Default empty array
-    /// - connectTimeout: Pass in the time before the connection times out. Default 30 seconds.
+    /// - connectTimeout: Pass in the time before the TCP connection times out. Default 30 seconds.
+    /// - loginTimeout: Pass in the time before the SSH handshake times out. Default 10 seconds. nil disables the timeout.
     /// - Returns: An SSH client.
     public static func connect(
         host: String,
@@ -285,7 +286,8 @@ public final class SSHClient {
         protocolOptions: Set<SSHProtocolOption> = [],
         group: MultiThreadedEventLoopGroup = .singleton,
         channelHandlers: [ChannelHandler] = [],
-        connectTimeout:TimeAmount = .seconds(30)
+        connectTimeout: TimeAmount = .seconds(30),
+        loginTimeout: TimeAmount? = .seconds(10)
     ) async throws -> SSHClient {
         let session = try await SSHClientSession.connect(
             host: host,
@@ -296,7 +298,8 @@ public final class SSHClient {
             protocolOptions: protocolOptions,
             group: group,
             channelHandlers: channelHandlers,
-            connectTimeout: connectTimeout
+            connectTimeout: connectTimeout,
+            loginTimeout: loginTimeout
         )
         
         let client = SSHClient(

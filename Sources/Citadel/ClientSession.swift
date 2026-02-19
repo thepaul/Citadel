@@ -73,12 +73,14 @@ final class ClientHandshakeHandler: ChannelInboundHandler, Sendable {
         promise.futureResult
     }
 
-    init(eventLoop: EventLoop, loginTimeout: TimeAmount) {
+    init(eventLoop: EventLoop, loginTimeout: TimeAmount?) {
         let promise = eventLoop.makePromise(of: Void.self)
         self.promise = promise
 
-        eventLoop.scheduleTask(deadline: .now() + loginTimeout) {
-            promise.fail(ChannelError.connectTimeout(loginTimeout))
+        if let loginTimeout {
+            eventLoop.scheduleTask(deadline: .now() + loginTimeout) {
+                promise.fail(ChannelError.connectTimeout(loginTimeout))
+            }
         }
     }
 
@@ -108,6 +110,9 @@ public struct SSHClientSettings: Sendable {
     public var group: EventLoopGroup = MultiThreadedEventLoopGroup.singleton
     internal var channelHandlers: [ChannelHandler & Sendable] = []
     public var connectTimeout: TimeAmount = .seconds(30)
+    /// Timeout for the SSH handshake (key exchange + authentication) after TCP connects.
+    /// nil means no timeout — useful when host key verification requires user interaction.
+    public var loginTimeout: TimeAmount? = .seconds(10)
 
     public init(
         host: String,
@@ -169,7 +174,7 @@ final class SSHClientSession: Sendable {
     ) -> EventLoopFuture<Void> {
         let handshakeHandler = ClientHandshakeHandler(
             eventLoop: channel.eventLoop,
-            loginTimeout: .seconds(10)
+            loginTimeout: settings.loginTimeout
         )
         var clientConfiguration = SSHClientConfiguration(
             userAuthDelegate: settings.authenticationMethod(),
@@ -246,7 +251,8 @@ final class SSHClientSession: Sendable {
     /// - protocolOptions: The protocol options to use, will use the default options if not specified.
     /// - group: The event loop group to use, will use a new group with one thread if not specified.
     /// - channelHandlers: Pass in an array of channel prehandlers that execute first. Default empty array
-    /// - connectTimeout: Pass in the time before the connection times out. Default 30 seconds.
+    /// - connectTimeout: Pass in the time before the TCP connection times out. Default 30 seconds.
+    /// - loginTimeout: Pass in the time before the SSH handshake times out. Default 10 seconds. nil disables the timeout.
     static func connect(
         host: String,
         port: Int = 22,
@@ -256,7 +262,8 @@ final class SSHClientSession: Sendable {
         protocolOptions: Set<SSHProtocolOption> = [],
         group: EventLoopGroup = MultiThreadedEventLoopGroup.singleton,
         channelHandlers: [ChannelHandler] = [],
-        connectTimeout: TimeAmount = .seconds(30)
+        connectTimeout: TimeAmount = .seconds(30),
+        loginTimeout: TimeAmount? = .seconds(10)
     ) async throws -> SSHClientSession {
         var settings = SSHClientSettings(
             host: host,
@@ -270,7 +277,8 @@ final class SSHClientSession: Sendable {
         settings.group = group
         settings.channelHandlers = channelHandlers
         settings.connectTimeout = connectTimeout
-        
+        settings.loginTimeout = loginTimeout
+
         return try await connect(
             settings: settings
         )
